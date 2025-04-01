@@ -37,17 +37,10 @@ obtain a utility to make the parameters persistent.
 sudo apt-get install iptables-persistent
 ```
 
-create these files if you've never configured iptables
-
-```
-touch /etc/iptables/rules.v4
-touch /etc/iptables/rules.v6
-```
-
 start hardening
 
 ```
-sudo bash iptables.sh --dns --https --http
+sudo bash iptables.sh --http --https --dns --dhcp --ntp
 sudo ip6tables-restore < /etc/iptables/rules.v6
 sudo iptables-restore < /etc/iptables/rules.v4
 ```
