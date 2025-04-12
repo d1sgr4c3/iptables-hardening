@@ -31,6 +31,7 @@ usage: $0 [options]
   --kvm		allows KVM Hypervisor (Ovirt-attached)
   --ovirt	allows Ovirt Manager Specific Ports
   --ipa		allows IPA/IdM Authentication Server
+  --hkps        allows HKPS (HTTP Keyserver Protocol over TLS)
 
 Configures iptables firewall rules for Debian-based distros.
  
@@ -38,7 +39,7 @@ EOF
 }
 
 # Get options
-OPTS=`getopt -o h --long http,https,dns,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
+OPTS=`getopt -o h --long hkps,http,https,dns,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
 if [ $? != 0 ]; then
 	exit 1
 fi
@@ -46,6 +47,7 @@ eval set -- "$OPTS"
 
 while true ; do
     case "$1" in
+	--hkps) HKPS=1 ; shift ;;
 	--http) HTTP=1 ; shift ;;
 	--https) HTTPS=1 ; shift ;;
 	--dns) DNS=1 ; shift ;;
@@ -162,6 +164,14 @@ cat <<EOF >> /etc/iptables/rules.v4
 ####   Recommended Article: http://www.cyberciti.biz/tips/howto-apache-force-https-secure-connections.html
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
+EOF
+fi
+
+if [ ! -z $HKPS ]; then
+cat <<EOF >> /etc/iptables/rules.v4
+#### HKPS -- HTTP Keyserver Protocol over TLS
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
+-A OUTPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 EOF
 fi
 
@@ -375,6 +385,14 @@ cat <<EOF >> /etc/iptables/rules.v6
 ####   Recommended Article: http://www.cyberciti.biz/tips/howto-apache-force-https-secure-connections.html
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
+EOF
+fi
+
+if [ ! -z $HKPS ]; then
+cat <<EOF >> /etc/iptables/rules.v4
+#### HKPS -- HTTP Keyserver Protocol over TLS
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
+-A OUTPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 EOF
 fi
 
