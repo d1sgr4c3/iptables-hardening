@@ -125,9 +125,9 @@ EOF
 if [ ! -z $DNS ]; then
 cat <<EOF >> /etc/iptables/rules.v4
 #### DNS Services (ISC BIND/IdM/IPA)
--A INPUT -m state --state NEW -m tcp -p tcp --dport 53 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
+-A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 53 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
 EOF
 fi
@@ -338,9 +338,9 @@ EOF
 if [ ! -z $DNS ]; then
 cat <<EOF >> /etc/iptables/rules.v6
 #### DNS Services (ISC BIND/IdM/IPA)
--A INPUT -m state --state NEW -m tcp -p tcp --dport 53 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
+-A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 53 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
 EOF
 fi
