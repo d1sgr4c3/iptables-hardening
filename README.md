@@ -25,6 +25,7 @@ usage: iptables.sh [options]
   --kvm		allows KVM Hypervisor (Ovirt-attached)
   --ovirt	allows Ovirt Manager Specific Ports
   --ipa		allows IPA/IdM Authentication Server
+  --hkps        allows HKPS (HTTP Keyserver Protocol over TLS)
 
 Configures iptables firewall rules for Debian-based distros.
 ```
@@ -37,7 +38,7 @@ obtain a utility to make the parameters persistent.
 sudo apt-get install iptables-persistent
 ```
 
-start hardening
+apply hardening
 
 ```
 sudo bash iptables.sh --http --https --dns --dhcp --ntp
