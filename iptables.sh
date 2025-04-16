@@ -15,7 +15,8 @@ usage: $0 [options]
 
   --http	allows HTTP (80/tcp)
   --https	allows HTTPS (443/tcp)
-  --dns		allows DNS (53/tcp/udp)
+  --dns	 <IP>	allows DNS (53/udp)
+  --sdns <IP>	allows DNSoverTLS (853/tcp)
   --ntp		allows NTP (123/tcp/udp)
   --dhcp	allows DHCP (67,68/tcp/udp)
   --tftp	allows TFTP (69/tcp/udp)
@@ -39,9 +40,9 @@ EOF
 }
 
 # Get options
-OPTS=`getopt -o h --long hkps,http,https,dns,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
+OPTS=`getopt -o h --long hkps,http,https,dns:,sdns:,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
 if [ $? != 0 ]; then
-	exit 1
+	usage
 fi
 eval set -- "$OPTS"
 
@@ -50,7 +51,10 @@ while true ; do
 	--hkps) HKPS=1 ; shift ;;
 	--http) HTTP=1 ; shift ;;
 	--https) HTTPS=1 ; shift ;;
-	--dns) DNS=1 ; shift ;;
+        --dns)
+            if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --sdns requires an IP address argument.\033[0m" && exit 1; else DNS_IP="$2"; shift 2; fi ;;
+        --sdns)
+            if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --sdns requires an IP address argument.\033[0m" && exit 1; else SDNS_IP="$2"; shift 2; fi ;;
 	--dhcp) DHCP=1 ; shift ;;
 	--ldap) LDAP=1 ; shift ;;
 	--ldaps) LDAPS=1 ; shift ;;
@@ -82,7 +86,7 @@ done
 
 # Check for root user
 if [[ $EUID -ne 0 ]]; then
-	tput setaf 1;echo -e "\033[1mPlease re-run this script as root!\033[0m";tput sgr0
+	tput setaf 1;echo -e "\033[1m[!] Please re-run this script as root!\033[0m";tput sgr0
 	exit 1
 fi
 
@@ -124,13 +128,19 @@ cat <<EOF > /etc/iptables/rules.v4
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
 EOF
 
-if [ ! -z $DNS ]; then
+if [ -n "$DNS_IP" ]; then
 cat <<EOF >> /etc/iptables/rules.v4
-#### DNS Services (ISC BIND/IdM/IPA)
--A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
--A INPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
--A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
+#### DNS (53/tcp)
+-A INPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
+-A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
+EOF
+fi
+
+if [ -n "$SDNS_IP" ]; then
+cat <<EOF >> /etc/iptables/rules.v4
+#### DNSoverTLS (853/tcp)
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
+-A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 EOF
 fi
 
@@ -345,13 +355,19 @@ cat <<EOF > /etc/iptables/rules.v6
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
 EOF
 
-if [ ! -z $DNS ]; then
+if [ -n "$DNS_IP" ]; then
 cat <<EOF >> /etc/iptables/rules.v6
-#### DNS Services (ISC BIND/IdM/IPA)
--A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -j ACCEPT
--A INPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
--A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -j ACCEPT
+#### DNS (53/tcp)
+-A INPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
+-A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
+EOF
+fi
+
+if [ -n "$SDNS_IP" ]; then
+cat <<EOF >> /etc/iptables/rules.v6
+#### DNSoverTLS (853/tcp)
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
+-A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 EOF
 fi
 
@@ -389,7 +405,7 @@ EOF
 fi
 
 if [ ! -z $HKPS ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> /etc/iptables/rules.v6
 #### HKPS -- HTTP Keyserver Protocol over TLS
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
