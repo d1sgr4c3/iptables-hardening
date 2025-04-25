@@ -18,7 +18,7 @@ usage: $0 [options]
   --dns	 <IP>	allows DNS (53/udp)
   --sdns <IP>	allows DNSoverTLS (853/tcp)
   --ntp		allows NTP (123/tcp/udp)
-  --dhcp	allows DHCP (67,68/tcp/udp)
+  --dhcp	allows DHCP (67,68/udp)
   --tftp	allows TFTP (69/tcp/udp)
   --rsyslog	allows RSYSLOG (514/tcp/udp)
   --kerberos	allows Kerberos (88,464/tcp/udp)
@@ -113,14 +113,12 @@ cat <<EOF > ./rules.v4
 -A INPUT -i lo -j ACCEPT
 -A OUTPUT -o lo -j ACCEPT
 #### SSH/SCP/SFTP
--A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
 EOF
 
 if [ -n "$DNS_IP" ]; then
 cat <<EOF >> ./rules.v4
 #### DNS (53/tcp)
--A INPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
 EOF
 fi
@@ -128,7 +126,6 @@ fi
 if [ -n "$SDNS_IP" ]; then
 cat <<EOF >> ./rules.v4
 #### DNSoverTLS (853/tcp)
--A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 EOF
 fi
@@ -136,13 +133,9 @@ fi
 if [ ! -z $DHCP ]; then
 cat <<EOF >> ./rules.v4
 #### DHCP Server
--A INPUT -m state --state NEW -m tcp -p tcp --dport 67 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 67 -j ACCEPT
--A INPUT -m state --state NEW -m tcp -p tcp --dport 68 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 68 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 67 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 67 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 68 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 68 -j ACCEPT
 EOF
 fi
@@ -169,7 +162,6 @@ fi
 if [ ! -z $HKPS ]; then
 cat <<EOF >> ./rules.v4
 #### HKPS -- HTTP Keyserver Protocol over TLS
--A INPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 EOF
 fi
@@ -192,8 +184,6 @@ fi
 if [ ! -z $NTP ]; then
 cat <<EOF >> ./rules.v4
 #### NTP Server
--A INPUT -m state --state NEW -m tcp -p tcp --dport 123 -j ACCEPT
--A INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 123 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT
 EOF
@@ -347,7 +337,6 @@ EOF
 if [ -n "$DNS_IP" ]; then
 cat <<EOF >> ./rules.v6
 #### DNS (53/tcp)
--A INPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
 EOF
 fi
@@ -355,7 +344,6 @@ fi
 if [ -n "$SDNS_IP" ]; then
 cat <<EOF >> ./rules.v6
 #### DNSoverTLS (853/tcp)
--A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 EOF
 fi
@@ -363,13 +351,9 @@ fi
 if [ ! -z $DHCP ]; then
 cat <<EOF >> ./rules.v6
 #### DHCP Server
--A INPUT -m state --state NEW -m tcp -p tcp --dport 67 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 67 -j ACCEPT
--A INPUT -m state --state NEW -m tcp -p tcp --dport 68 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 68 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 67 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 67 -j ACCEPT
--A OUTPUT -m state --state NEW -m tcp -p tcp --dport 68 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 68 -j ACCEPT
 EOF
 fi
@@ -388,7 +372,6 @@ if [ ! -z $HTTP ]; then
 cat <<EOF >> ./rules.v6
 #### HTTPD - Recommend forwarding traffic to HTTPS 443
 ####   Recommended Article: http://www.cyberciti.biz/tips/howto-apache-force-https-secure-connections.html
--A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 EOF
 fi
@@ -396,7 +379,6 @@ fi
 if [ ! -z $HKPS ]; then
 cat <<EOF >> ./rules.v6
 #### HKPS -- HTTP Keyserver Protocol over TLS
--A INPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 EOF
 fi
@@ -419,8 +401,6 @@ fi
 if [ ! -z $NTP ]; then
 cat <<EOF >> ./rules.v6
 #### NTP Server
--A INPUT -m state --state NEW -m tcp -p tcp --dport 123 -j ACCEPT
--A INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 123 -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT
 EOF
@@ -439,7 +419,6 @@ fi
 if [ ! -z $HTTPS ]; then
 cat <<EOF >> ./rules.v6
 #### HTTPS
--A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
 EOF
 fi
