@@ -33,6 +33,7 @@ usage: $0 [options]
   --ovirt	allows Ovirt Manager Specific Ports
   --ipa		allows IPA/IdM Authentication Server
   --hkps        allows HKPS (HTTP Keyserver Protocol over TLS)
+  --noipv6  disallows ipv6
 
 Configures iptables firewall rules for Debian-based distros.
  
@@ -40,7 +41,7 @@ EOF
 }
 
 # Get options
-OPTS=`getopt -o h --long hkps,http,https,dns:,sdns:,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
+OPTS=`getopt -o h --long noipv6,hkps,http,https,dns:,sdns:,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
 if [ "$#" -eq 0 ]; then
     usage
     exit 0
@@ -51,6 +52,7 @@ while true ; do
     case "$1" in
 	--hkps) HKPS=1 ; shift ;;
 	--http) HTTP=1 ; shift ;;
+	--noipv6) NOIPV6=1 ; shift ;;
 	--https) HTTPS=1 ; shift ;;
         --dns)
             if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --sdns requires an IP address argument.\033[0m" && exit 1; else DNS_IP="$2"; shift 2; fi ;;
@@ -546,5 +548,18 @@ cat <<EOF >> ./rules.v6
 -A FORWARD -j REJECT --reject-with icmp6-adm-prohibited
 COMMIT
 EOF
+
+if [ ! -z "$NOIPV6" ]; then
+cat <<EOF > ./rules.v6
+#################################################################################################################
+# HARDENING SCRIPT IPTABLES Configuration
+#################################################################################################################
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT DROP [0:0]
+COMMIT
+EOF
+fi
 
 exit 0
