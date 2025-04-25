@@ -41,8 +41,9 @@ EOF
 
 # Get options
 OPTS=`getopt -o h --long hkps,http,https,dns:,sdns:,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
-if [ $? != 0 ]; then
-	usage
+if [ "$#" -eq 0 ]; then
+    usage
+    exit 0
 fi
 eval set -- "$OPTS"
 
@@ -84,29 +85,15 @@ while true ; do
 done
 
 
-# Check for root user
-if [[ $EUID -ne 0 ]]; then
-	tput setaf 1;echo -e "\033[1m[!] Please re-run this script as root!\033[0m";tput sgr0
-	exit 1
-fi
-
 # Check if iptables package is installed
 if [ ! -e $(which iptables) ]; then
 	echo "ERROR: The iptables package is not installed."
 	exit 1
 fi
 
-# Backup originial configuration
-if [ ! -e /etc/iptables/rules.v4.orig ]; then
-	cp /etc/iptables/rules.v4 /etc/iptables/rules.v4.orig
-fi
-if [ ! -e /etc/iptables/rules.v6.orig ]; then
-	cp /etc/iptables/rules.v6 /etc/iptables/rules.v6.orig
-fi
-
 
 # Basic rule set - allows established/related pakets and SSH through firewall
-cat <<EOF > /etc/iptables/rules.v4
+cat <<EOF > ./rules.v4
 #################################################################################################################
 # HARDENING SCRIPT IPTABLES Configuration
 #################################################################################################################
@@ -129,7 +116,7 @@ cat <<EOF > /etc/iptables/rules.v4
 EOF
 
 if [ -n "$DNS_IP" ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### DNS (53/tcp)
 -A INPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
@@ -137,7 +124,7 @@ EOF
 fi
 
 if [ -n "$SDNS_IP" ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### DNSoverTLS (853/tcp)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
@@ -145,7 +132,7 @@ EOF
 fi
 
 if [ ! -z $DHCP ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### DHCP Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 67 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 67 -j ACCEPT
@@ -159,7 +146,7 @@ EOF
 fi
 
 if [ ! -z $TFTP ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### TFTP Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 69 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 69 -j ACCEPT
@@ -169,7 +156,7 @@ EOF
 fi
 
 if [ ! -z $HTTP ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### HTTPD - Recommend forwarding traffic to HTTPS 443
 ####   Recommended Article: http://www.cyberciti.biz/tips/howto-apache-force-https-secure-connections.html
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
@@ -178,7 +165,7 @@ EOF
 fi
 
 if [ ! -z $HKPS ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### HKPS -- HTTP Keyserver Protocol over TLS
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
@@ -186,7 +173,7 @@ EOF
 fi
 
 if [ ! -z $KERBEROS ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### Kerberos Authentication (IdM/IPA)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 88 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 88 -j ACCEPT
@@ -201,7 +188,7 @@ EOF
 fi
 
 if [ ! -z $NTP ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### NTP Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 123 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT
@@ -211,7 +198,7 @@ EOF
 fi
 
 if [ ! -z $LDAP ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### LDAP (IdM/IPA)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 389 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 389 -j ACCEPT
@@ -221,7 +208,7 @@ EOF
 fi
 
 if [ ! -z $HTTPS ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### HTTPS
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
@@ -229,7 +216,7 @@ EOF
 fi
 
 if [ ! -z $RSYSLOG ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### RSYSLOG Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 514 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 514 -j ACCEPT
@@ -239,7 +226,7 @@ EOF
 fi
 
 if [ ! -z $LDAPS ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### LDAPS - LDAP via SSL (IdM/IPA)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 636 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 636 -j ACCEPT
@@ -249,7 +236,7 @@ EOF
 fi
 
 if [ ! -z $NFSV4 ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### NFSv4 Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 2049 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 2049 -j ACCEPT
@@ -257,7 +244,7 @@ EOF
 fi
 
 if [ ! -z $ISCSI ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### iSCSI Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 3260 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 3260 -j ACCEPT
@@ -265,7 +252,7 @@ EOF
 fi
 
 if [ ! -z $POSTGRESQL ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### PostgreSQL Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 5432 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 5432 -j ACCEPT
@@ -273,7 +260,7 @@ EOF
 fi
 
 if [ ! -z $MARIADB ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### MariaDB/MySQL Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 3306 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 3306 -j ACCEPT
@@ -281,7 +268,7 @@ EOF
 fi
 
 if [ ! -z $SAMBA ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### Samba/CIFS Server
 -A INPUT -m udp -p udp --dport 137 -j ACCEPT
 -A INPUT -m udp -p udp --dport 138 -j ACCEPT
@@ -295,7 +282,7 @@ EOF
 fi
 
 if [ ! -z $KVM ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### SPICE/VNC Client (KVM)
 -A INPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 5634:6166 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 5634:6166 -j ACCEPT
@@ -311,7 +298,7 @@ EOF
 fi
 
 if [ ! -z $OVIRT ]; then
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #### Ovirt Manager (ActiveX Client)
 -A INPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 8006:8009 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 8006:8009 -j ACCEPT
@@ -321,7 +308,7 @@ cat <<EOF >> /etc/iptables/rules.v4
 EOF
 fi
 
-cat <<EOF >> /etc/iptables/rules.v4
+cat <<EOF >> ./rules.v4
 #################################################################################################################
 # Block timestamp-request and timestamp-reply
 
@@ -333,7 +320,7 @@ COMMIT
 EOF
 
 # IPv6 Basic rule set - allows established/related pakets and SSH through firewall
-cat <<EOF > /etc/iptables/rules.v6
+cat <<EOF > ./rules.v6
 #################################################################################################################
 # HARDENING SCRIPT IPTABLES Configuration
 #################################################################################################################
@@ -356,7 +343,7 @@ cat <<EOF > /etc/iptables/rules.v6
 EOF
 
 if [ -n "$DNS_IP" ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### DNS (53/tcp)
 -A INPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m udp -p udp --dport 53 -d ${DNS_IP} -j ACCEPT
@@ -364,7 +351,7 @@ EOF
 fi
 
 if [ -n "$SDNS_IP" ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### DNSoverTLS (853/tcp)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 853 -d ${SDNS_IP} -j ACCEPT
@@ -372,7 +359,7 @@ EOF
 fi
 
 if [ ! -z $DHCP ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### DHCP Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 67 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 67 -j ACCEPT
@@ -386,7 +373,7 @@ EOF
 fi
 
 if [ ! -z $TFTP ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### TFTP Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 69 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 69 -j ACCEPT
@@ -396,7 +383,7 @@ EOF
 fi
 
 if [ ! -z $HTTP ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### HTTPD - Recommend forwarding traffic to HTTPS 443
 ####   Recommended Article: http://www.cyberciti.biz/tips/howto-apache-force-https-secure-connections.html
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
@@ -405,7 +392,7 @@ EOF
 fi
 
 if [ ! -z $HKPS ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### HKPS -- HTTP Keyserver Protocol over TLS
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 11371 -j ACCEPT
@@ -413,7 +400,7 @@ EOF
 fi
 
 if [ ! -z $KERBEROS ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### Kerberos Authentication (IdM/IPA)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 88 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 88 -j ACCEPT
@@ -428,7 +415,7 @@ EOF
 fi
 
 if [ ! -z $NTP ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### NTP Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 123 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 123 -j ACCEPT
@@ -438,7 +425,7 @@ EOF
 fi
 
 if [ ! -z $LDAP ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### LDAP (IdM/IPA)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 389 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 389 -j ACCEPT
@@ -448,7 +435,7 @@ EOF
 fi
 
 if [ ! -z $HTTPS ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### HTTPS
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
@@ -456,7 +443,7 @@ EOF
 fi
 
 if [ ! -z $RSYSLOG ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### RSYSLOG Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 514 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 514 -j ACCEPT
@@ -466,7 +453,7 @@ EOF
 fi
 
 if [ ! -z $LDAPS ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### LDAPS - LDAP via SSL (IdM/IPA)
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 636 -j ACCEPT
 -A INPUT -m state --state NEW -m udp -p udp --dport 636 -j ACCEPT
@@ -476,7 +463,7 @@ EOF
 fi
 
 if [ ! -z $NFSV4 ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### NFSv4 Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 2049 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 2049 -j ACCEPT
@@ -484,7 +471,7 @@ EOF
 fi
 
 if [ ! -z $ISCSI ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### iSCSI Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 3260 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 3260 -j ACCEPT
@@ -492,7 +479,7 @@ EOF
 fi
 
 if [ ! -z $POSTGRESQL ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### PostgreSQL Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 5432 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 5432 -j ACCEPT
@@ -500,7 +487,7 @@ EOF
 fi
 
 if [ ! -z $MARIADB ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### MariaDB/MySQL Server
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 3306 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --dport 3306 -j ACCEPT
@@ -508,7 +495,7 @@ EOF
 fi
 
 if [ ! -z $SAMBA ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### Samba/CIFS Server
 -A INPUT -m udp -p udp --dport 137 -j ACCEPT
 -A INPUT -m udp -p udp --dport 138 -j ACCEPT
@@ -522,7 +509,7 @@ EOF
 fi
 
 if [ ! -z $KVM ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### SPICE/VNC Client (KVM)
 -A INPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 5634:6166 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 5634:6166 -j ACCEPT
@@ -538,7 +525,7 @@ EOF
 fi
 
 if [ ! -z $OVIRT ]; then
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #### Ovirt Manager (ActiveX Client)
 -A INPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 8006:8009 -j ACCEPT
 -A OUTPUT -m state --state NEW -m tcp -p tcp --match multiport --dports 8006:8009 -j ACCEPT
@@ -548,7 +535,7 @@ cat <<EOF >> /etc/iptables/rules.v6
 EOF
 fi
 
-cat <<EOF >> /etc/iptables/rules.v6
+cat <<EOF >> ./rules.v6
 #################################################################################################################
 # Limit Echo Requests - Prevents DoS attacks
 -A INPUT -p icmpv6 --icmpv6-type echo-request -m limit --limit 900/min -j ACCEPT
