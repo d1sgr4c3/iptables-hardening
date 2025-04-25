@@ -1,7 +1,7 @@
 # iptables-hardening
 the iptables-hardening script sets up iptables(v4 and v6) rules to strengthen Linux firewall security and block unwanted network traffic.
 
-```bash
+```
 $ iptables.sh --help
 usage: iptables.sh [options]
 
@@ -38,10 +38,18 @@ obtain a utility to make the parameters persistent.
 sudo apt-get install iptables-persistent
 ```
 
-apply hardening
+verify hardening:
 
+```bash
+sudo bash iptables.sh --http --https --dhcp --ntp --dns 1.1.1.1
+vi rules.v4 # verify config manually
+vi rules.v6 # verify config manually
 ```
-sudo bash iptables.sh --http --https --dns --dhcp --ntp
-sudo ip6tables-restore < /etc/iptables/rules.v6
-sudo iptables-restore < /etc/iptables/rules.v4
+
+apply changes:
+
+```bash
+cp rules.v4 /etc/iptables/rules.v4
+cp rules.v6 /etc/iptables/rules.v6
+sudo systemctl restart systemd-resolved NetworkManager iptables.service
 ```
