@@ -41,7 +41,7 @@ EOF
 }
 
 # Get options
-OPTS=`getopt -o h --long noipv6,hkps,http,https,dns:,sdns:,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
+OPTS=`getopt -o h --long noipv6,hkps,http,https,ssh:,dns:,sdns:,ldap,ldaps,kvm,ovirt,nfsv4,iscsi,idm,ipa,krb5,kerberos,rsyslog,dhcp,bootp,tftp,ntp,smb,samba,cifs,mysql,mariadb,postgres,postgresql,help -- "$@"`
 if [ "$#" -eq 0 ]; then
     usage
     exit 0
@@ -54,10 +54,12 @@ while true ; do
 	--http) HTTP=1 ; shift ;;
 	--noipv6) NOIPV6=1 ; shift ;;
 	--https) HTTPS=1 ; shift ;;
-        --dns)
-            if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --sdns requires an IP address argument.\033[0m" && exit 1; else DNS_IP="$2"; shift 2; fi ;;
-        --sdns)
-            if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --sdns requires an IP address argument.\033[0m" && exit 1; else SDNS_IP="$2"; shift 2; fi ;;
+    --dns)
+        if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --sdns requires an IP address argument.\033[0m" && exit 1; else DNS_IP="$2"; shift 2; fi ;;
+    --sdns)
+        if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --sdns requires an IP address argument.\033[0m" && exit 1; else SDNS_IP="$2"; shift 2; fi ;;
+    --ssh)
+        if [ -z "$2" ] || [[ ! "$2" =~ ^([0-9]{1,3}[\.]){3}[0-9]{1,3} ]]; then echo -e "\033[1m[!] --ssh requires an IP address argument.\033[0m" && exit 1; else SSH_IP="$2"; shift 2; fi ;;
 	--dhcp) DHCP=1 ; shift ;;
 	--ldap) LDAP=1 ; shift ;;
 	--ldaps) LDAPS=1 ; shift ;;
@@ -112,9 +114,14 @@ cat <<EOF > ./rules.v4
 -A OUTPUT -o lo -j ACCEPT
 # Allow ICMP (Ping)
 -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
-#### SSH/SCP/SFTP
--A OUTPUT -m tcp -p tcp --dport 22 -j ACCEPT
 EOF
+
+if [ -n "$SSH_IP" ]; then
+cat <<EOF >> ./rules.v4
+#### SSH (22)
+-A OUTPUT -m tcp -p tcp --dport 22 -d ${SSH_IP} -j ACCEPT
+EOF
+fi
 
 if [ -n "$DNS_IP" ]; then
 cat <<EOF >> ./rules.v4
@@ -323,10 +330,14 @@ cat <<EOF > ./rules.v6
 -A OUTPUT -o lo -j ACCEPT
 # Allow ICMP (Ping)
 -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
-#### SSH/SCP/SFTP
--A INPUT -m tcp -p tcp --dport 22 -j ACCEPT
--A OUTPUT -m tcp -p tcp --dport 22 -j ACCEPT
 EOF
+
+if [ -n "$SSH_IP" ]; then
+cat <<EOF >> ./rules.v6
+#### SSH (22)
+-A OUTPUT -m tcp -p tcp --dport 22 -d ${SSH_IP} -j ACCEPT
+EOF
+fi
 
 if [ -n "$DNS_IP" ]; then
 cat <<EOF >> ./rules.v6
